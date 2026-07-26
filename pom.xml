@@ -111,6 +111,12 @@
             <scope>runtime</scope>
         </dependency>
 
+        <dependency>
+            <groupId>com.microsoft.sqlserver</groupId>
+            <artifactId>mssql-jdbc</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
         <!-- PostgreSQL Driver (alternative) -->
         <dependency>
             <groupId>org.postgresql</groupId>

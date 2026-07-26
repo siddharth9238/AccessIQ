@@ -28,6 +28,15 @@ services:
       retries: 3
       start_period: 40s
 
+  services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "YourStrongPassword123!"
+    ports:
+      - "1433:1433"
+
   postgres:
     image: postgres:16-alpine
     container_name: accessiq-db
