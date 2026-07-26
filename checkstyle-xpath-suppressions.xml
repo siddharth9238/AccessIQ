@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suppressions PUBLIC
+        "-//Checkstyle//DTD Suppression 1.2//EN"
+        "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+<suppressions>
+    <!-- Suppress HiddenField for constructor injection (false positive in Spring beans) -->
+    <suppress checks="HiddenField" files="src/main/java/.*"/>
+    <!-- Suppress DesignForExtension for Spring beans -->
+    <suppress checks="DesignForExtension" files="src/main/java/.*"/>
+    <!-- Suppress FinalParameters for Spring beans -->
+    <suppress checks="FinalParameters" files="src/main/java/.*"/>
+    <!-- Suppress MissingJavadocMethod for Spring beans -->
+    <suppress checks="MissingJavadocMethod" files="src/main/java/.*"/>
+    <!-- Suppress JavadocVariable for logger fields -->
+    <suppress checks="MissingJavadocVariable" files="src/main/java/.*"/>
+    <!-- Suppress JavadocType for classes -->
+    <suppress checks="MissingJavadocType" files="src/main/java/.*"/>
+    <!-- Suppress MagicNumber -->
+    <suppress checks="MagicNumber" files="src/main/java/.*"/>
+    <!-- Suppress LineLength -->
+    <suppress checks="LineLength" files="src/main/java/.*"/>
+    <!-- Suppress JavadocPackage -->
+    <suppress checks="JavadocPackage"/>
+</suppressions>

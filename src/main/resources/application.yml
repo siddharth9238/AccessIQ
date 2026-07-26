@@ -1,0 +1,87 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /api/v1
+
+spring:
+  application:
+    name: accessiq
+  datasource:
+    url: ${DB_URL:jdbc:h2:mem:accessiq-db;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=MySQL}
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:}
+    driver-class-name: ${DB_DRIVER:org.h2.Driver}
+    hikari:
+      pool-name: HikariCP
+      maximum-pool-size: 20
+      minimum-idle: 5
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      connection-timeout: 30000
+  jpa:
+    hibernate:
+      ddl-auto: update
+      show-sql: false
+      properties:
+        hibernate:
+          dialect: ${HibernateDialect:org.hibernate.dialect.H2Dialect}
+          format_sql: true
+          jdbc:
+            batch_size: 20
+            fetch_size: 20
+            order_inserts: true
+            order_updates: true
+            generate_statistics: false
+  liquibase:
+    enabled: false
+
+logging:
+  level:
+    com.accessiq: INFO
+    org.springframework: INFO
+    org.hibernate.SQL: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+accessiq:
+  jwt:
+    secret: ${JWT_SECRET:accessiq-secret-key-change-in-production-min-256-chars-long-secret-key-for-jwt-token}
+    access-token-minutes: 15
+    refresh-token-days: 7
+  bootstrap:
+    admin:
+      email: ${ADMIN_EMAIL:admin@accessiq.com}
+      password: ${ADMIN_PASSWORD:Admin@123456}
+    sample:
+      password: ${SAMPLE_PASSWORD:Sample@123456}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,session
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    distribution:
+      percentiles-histogram:
+        http:
+          requests: true
+      sla:
+        http:
+          requests:
+            - 100
+            - 200
+            - 500
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: case

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suppressions PUBLIC
+        "-//Checkstyle//DTD Suppression 1.2//EN"
+        "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+<suppressions>
+    <!-- Suppress HiddenField for constructor injection (false positive) -->
+    <suppress checks="HiddenField" files="src/main/java/.*"/>
+    <!-- Suppress DesignForExtension for Spring beans -->
+    <suppress checks="DesignForExtension" files="src/main/java/.*"/>
+</suppressions>

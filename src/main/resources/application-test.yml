@@ -1,0 +1,47 @@
+server:
+  port: 0
+  servlet:
+    context-path: /api/v1
+
+spring:
+  datasource:
+    url: jdbc:tc:mysql:8.0.33:/accessiq
+    username: test
+    password: test
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: false
+
+logging:
+  level:
+    com.accessiq: INFO
+    org.springframework: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+accessiq:
+  jwt:
+    secret: test-accessiq-secret-key-for-testing-only-min-256-chars-long-secret-key-for-jwt-token
+    access-token-minutes: 15
+    refresh-token-days: 7
+  bootstrap:
+    admin:
+      email: admin@test.accessiq.com
+      password: Admin@Test123456
+    sample:
+      password: Sample@Test123456
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always

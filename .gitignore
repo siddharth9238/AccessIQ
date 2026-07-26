@@ -1,0 +1,82 @@
+# IDE
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+*.class
+*.jar
+*.war
+*.ear
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+
+# Maven
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# Gradle
+.gradle/
+build/
+.gradle/
+
+# Environment files
+.env
+.env.local
+*.env
+
+# Secrets
+secrets/
+*.jks
+*.p12
+*.pem
+
+# Database
+*.sql
+*.dump
+
+# Test
+/test-output/
+/coverage/
+
+# Logs
+logs/
+*.log
+
+# Docker
+.docker/
+docker-compose.override.yml
+
+# OS
+*.swp
+*.swo
+*~
+
+# Thymeleaf
+*.th.xml
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Misc
+.suggestions
+*.cache
+.meter
+.mvn/
+
+# Kubernetes
+k8s/
+*.k8s.yaml
+
+# Helm
+charts/
+*.tgz

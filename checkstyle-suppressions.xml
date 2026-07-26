@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suppressions PUBLIC
+          "-//Checkstyle//DTD Suppression 1.2//EN"
+          "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+<suppressions>
+    <!-- Suppress HiddenField for constructor injection (false positive in Spring beans) -->
+    <suppress checks="HiddenField" files="src/main/java/.*"/>
+    <suppress checks="HiddenField" files="src/test/java/.*"/>
+    <!-- Suppress DesignForExtension for Spring beans -->
+    <suppress checks="DesignForExtension" files="src/main/java/.*"/>
+    <suppress checks="DesignForExtension" files="src/test/java/.*"/>
+    <!-- Suppress MissingJavadocMethod for Spring beans -->
+    <suppress checks="MissingJavadocMethod" files="src/main/java/.*"/>
+    <!-- Suppress JavadocVariable for logger fields -->
+    <suppress checks="MissingJavadocVariable" files="src/main/java/.*"/>
+    <suppress checks="MissingJavadocVariable" files="src/test/java/.*"/>
+    <!-- Suppress JavadocType for classes -->
+    <suppress checks="MissingJavadocType" files="src/main/java/.*"/>
+    <suppress checks="MissingJavadocType" files="src/test/java/.*"/>
+    <!-- Suppress MagicNumber -->
+    <suppress checks="MagicNumber" files="src/main/java/.*"/>
+    <suppress checks="MagicNumber" files="src/test/java/.*"/>
+    <!-- Suppress LineLength -->
+    <suppress checks="LineLength" files="src/main/java/.*"/>
+    <suppress checks="LineLength" files="src/test/java/.*"/>
+    <!-- Suppress JavadocPackage -->
+    <suppress checks="JavadocPackage"/>
+    <!-- Suppress ParameterName for Spring beans -->
+    <suppress checks="ParameterName" files="src/main/java/.*"/>
+    <suppress checks="ParameterName" files="src/test/java/.*"/>
+    <!-- Suppress LocalVariableName in tests -->
+    <suppress checks="LocalVariableName" files="src/test/java/.*"/>
+    <!-- Suppress ConstantName in tests -->
+    <suppress checks="ConstantName" files="src/test/java/.*"/>
+    <!-- Suppress UnusedImports in tests -->
+    <suppress checks="UnusedImports" files="src/test/java/.*"/>
+    <!-- Suppress AvoidStarImport in tests -->
+    <suppress checks="AvoidStarImport" files="src/test/java/.*"/>
+    <!-- Suppress EmptyBlock -->
+    <suppress checks="EmptyBlock" files="src/main/java/.*"/>
+    <!-- Suppress NewlineAtEndOfFile -->
+    <suppress checks="NewlineAtEndOfFile" files="src/main/java/.*"/>
+    <suppress checks="NewlineAtEndOfFile" files="src/test/java/.*"/>
+    <!-- Suppress RegexpSingleline (trailing spaces) -->
+    <suppress checks="RegexpSingleline" files="src/main/java/.*"/>
+    <suppress checks="RegexpSingleline" files="src/test/java/.*"/>
+    <!-- Suppress InterfaceIsType in tests -->
+    <suppress checks="InterfaceIsType" files="src/test/java/.*"/>
+    <!-- Suppress VisibilityModifier in tests -->
+    <suppress checks="VisibilityModifier" files="src/test/java/.*"/>
+    <!-- Suppress TodoComment -->
+    <suppress checks="TodoComment"/>
+    <!-- Suppress FinalParameters in tests -->
+    <suppress checks="FinalParameters" files="src/test/java/.*"/>
+    <!-- Suppress RightCurly in tests -->
+    <suppress checks="RightCurly" files="src/test/java/.*"/>
+    <!-- Suppress LeftCurly in tests -->
+    <suppress checks="LeftCurly" files="src/test/java/.*"/>
+    <!-- Suppress EmptyStatement in tests -->
+    <suppress checks="EmptyStatement" files="src/test/java/.*"/>
+    <!-- Suppress EqualsHashCode in tests -->
+    <suppress checks="EqualsHashCode" files="src/test/java/.*"/>
+    <!-- Suppress FinalVariableName in tests -->
+    <suppress checks="FinalVariableName" files="src/test/java/.*"/>
+    <!-- Suppress MemberName in tests -->
+    <suppress checks="MemberName" files="src/test/java/.*"/>
+    <!-- Suppress MethodLength in tests -->
+    <suppress checks="MethodLength" files="src/test/java/.*"/>
+    <!-- Suppress ParameterNumber in tests -->
+    <suppress checks="ParameterNumber" files="src/test/java/.*"/>
+    <!-- Suppress FileLength in tests -->
+    <suppress checks="FileLength" files="src/test/java/.*"/>
+    <!-- Suppress LocalFinalVariableName in tests -->
+    <suppress checks="LocalFinalVariableName" files="src/test/java/.*"/>
+    <!-- Suppress MissingJavadocType in tests -->
+    <suppress checks="MissingJavadocType" files="src/test/java/.*"/>
+    <!-- Suppress MissingJavadocMethod in tests -->
+    <suppress checks="MissingJavadocMethod" files="src/test/java/.*"/>
+</suppressions>
