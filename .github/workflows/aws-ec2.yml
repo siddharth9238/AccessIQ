@@ -1,0 +1,120 @@
+name: AWS EC2 Deployment
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  APP_NAME: accessiq
+  JAR_FILE: target/accessiq-1.0.0.jar
+  DEPLOYMENT_DIR: /opt/accessiq
+  SERVICE_NAME: accessiq
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: maven
+
+    - name: Cache Maven packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.m2
+        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-m2-
+
+    - name: Run tests
+      run: mvn test
+
+    - name: Build with Maven
+      run: mvn clean package -DskipTests
+
+    - name: Verify JAR exists
+      run: |
+        if [ ! -f "${{ env.JAR_FILE }}" ]; then
+          echo "JAR file not found!"
+          exit 1
+        fi
+        ls -la ${{ env.JAR_FILE }}
+
+    - name: Upload JAR artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: deployment-jar
+        path: ${{ env.JAR_FILE }}
+        retention-days: 1
+
+    - name: Setup SSH
+      uses: webfactory/ssh-agent@v0.5.4
+      with:
+        ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+
+    - name: Create backup directory
+      run: |
+        ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} "mkdir -p ${DEPLOYMENT_DIR}/backup"
+
+    - name: Backup previous deployment
+      run: |
+        ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} "if [ -f ${DEPLOYMENT_DIR}/${APP_NAME}.jar ]; then cp ${DEPLOYMENT_DIR}/${APP_NAME}.jar ${DEPLOYMENT_DIR}/backup/${APP_NAME}-\$(date +%Y%m%d%H%M%S).jar; fi"
+
+    - name: Copy new JAR to server
+      run: |
+        scp ${{ env.JAR_FILE }} ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:${DEPLOYMENT_DIR}/
+
+    - name: Stop application
+      run: |
+        ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} "sudo systemctl stop ${{ env.SERVICE_NAME }} || true"
+
+    - name: Wait for application to stop
+      run: |
+        ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} "sleep 5"
+
+    - name: Set proper permissions
+      run: |
+        ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} "chmod 644 ${DEPLOYMENT_DIR}/${APP_NAME}.jar"
+
+    - name: Start application
+      run: |
+        ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} "sudo systemctl start ${{ env.SERVICE_NAME }}"
+
+    - name: Wait for application to start
+      run: |
+        ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} "sleep 10"
+
+    - name: Health check
+      run: |
+        MAX_RETRIES=30
+        RETRY_INTERVAL=10
+        RETRY_COUNT=0
+        while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+          HTTP_STATUS=$(ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} "curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/actuator/health" || echo "000")
+          if [ "$HTTP_STATUS" = "200" ]; then
+            echo "Application is healthy!"
+            exit 0
+          fi
+          echo "Waiting for application to be healthy... (attempt $((RETRY_COUNT+1))/$MAX_RETRIES)"
+          RETRY_COUNT=$((RETRY_COUNT+1))
+          sleep $RETRY_INTERVAL
+        done
+        echo "Application health check failed!"
+        exit 1
+
+    - name: Rollback on failure
+      if: failure()
+      run: |
+        ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} "cp ${DEPLOYMENT_DIR}/backup/${APP_NAME}-*.jar ${DEPLOYMENT_DIR}/${APP_NAME}.jar 2>/dev/null || echo 'No backup found'"
+        ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} "sudo systemctl restart ${{ env.SERVICE_NAME }}"
+        ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} "sleep 10"
+        ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} "curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/actuator/health"

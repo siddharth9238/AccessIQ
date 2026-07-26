@@ -1,0 +1,86 @@
+name: Docker Build and Push
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*.*.*' ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  DOCKER_IMAGE: accessiq
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: maven
+
+    - name: Cache Maven packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.m2
+        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-m2-
+
+    - name: Run tests
+      run: mvn test
+
+    - name: Build with Maven
+      run: mvn clean package -DskipTests
+
+    - name: Verify JAR exists
+      run: |
+        if [ ! -f "target/accessiq-1.0.0.jar" ]; then
+          echo "JAR file not found!"
+          exit 1
+        fi
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.DOCKER_IMAGE }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}},value=${{ github.ref_name }}
+          type=semver,pattern={{major}}.{{minor}},value=${{ github.ref_name }}
+          type=semver,pattern={{major}},value=${{ github.ref_name }}
+          type=sha
+          type=raw,value=latest,enable=${{ github.ref_name == 'main' }}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Display image digest
+      run: echo "Image pushed: ${{ steps.meta.outputs.tags }}"

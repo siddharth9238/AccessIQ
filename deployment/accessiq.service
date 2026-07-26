@@ -1,0 +1,36 @@
+[Unit]
+Description=AccessIQ Spring Boot Application
+Documentation=https://accessiq.com/docs
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=accessiq
+Group=accessiq
+WorkingDirectory=/opt/accessiq
+Environment="JAVA_OPTS=-Xms256m -Xmx1024m -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
+Environment="SPRING_PROFILES_ACTIVE=prod"
+EnvironmentFile=/opt/accessiq/application.properties
+ExecStart=/usr/bin/java $JAVA_OPTS -jar /opt/accessiq/accessiq.jar
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RestartSec=30
+TimeoutStartSec=120
+TimeoutStopSec=60
+SysctlPidFile=/run/accessiq.pid
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=accessiq
+
+# Resource limits
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

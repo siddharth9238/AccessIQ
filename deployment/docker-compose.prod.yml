@@ -1,0 +1,132 @@
+version: '3.8'
+
+services:
+  accessiq:
+    image: accessiq:latest
+    container_name: accessiq-app
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - DB_URL=jdbc:postgresql://postgres:5432/accessiq
+      - DB_USERNAME=accessiq_user
+      - DB_PASSWORD=${DB_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+    volumes:
+      - accessiq_logs:/var/log/accessiq
+      - accessiq_uploads:/opt/accessiq/uploads
+    depends_on:
+      - postgres
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: accessiq-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=accessiq
+      - POSTGRES_USER=accessiq_user
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U accessiq_user -d accessiq"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: accessiq-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+    depends_on:
+      - accessiq
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: accessiq-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/dashboard.json:/var/lib/grafana/dashboards/accessiq-dashboard.json
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+    depends_on:
+      - prometheus
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  nginx:
+    image: nginx:alpine
+    container_name: accessiq-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./ssl:/etc/ssl:ro
+    depends_on:
+      - accessiq
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+
+volumes:
+  postgres_data:
+  grafana_data:
+  accessiq_logs:
+  accessiq_uploads:
+  prometheus_data:
+
+networks:
+  default:
+    name: accessiq-network

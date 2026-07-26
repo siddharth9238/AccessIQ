@@ -17,8 +17,24 @@ AccessIQ provides comprehensive monitoring through Spring Boot Actuator, Microme
 | Env | `/actuator/env` | Environment properties |
 | Beans | `/actuator/beans` | Spring beans |
 | Mappings | `/actuator/mappings` | Request mappings |
+| Heapdump | `/actuator/heapdump` | Heap dump (dev only) |
+| Thread Dump | `/actuator/threaddump` | Thread dump |
 
 ### Health Indicators
+
+#### Default Health Indicators
+
+- **db**: Database connectivity
+- **diskSpace**: Disk space availability
+- **ping**: Basic liveness check
+- **refreshScope**: Refresh scope support
+
+#### Custom Health Indicators
+
+- **request**: Request processing health
+- **workflow**: Workflow engine status
+
+### Sample Health Response
 
 ```json
 {
@@ -48,28 +64,54 @@ AccessIQ provides comprehensive monitoring through Spring Boot Actuator, Microme
 
 ### JVM Metrics
 
-| Metric | Description |
-|--------|-------------|
-| jvm.memory.used | Memory used by JVM |
-| jvm.memory.max | Maximum memory |
-| jvm.threads.live | Live thread count |
-| jvm.gc.pause | GC pause times |
+| Metric | Description | Tags |
+|--------|-------------|------|
+| jvm.memory.used | Memory used by JVM | area, id |
+| jvm.memory.max | Maximum memory | area, id |
+| jvm.memory.committed | Committed memory | area, id |
+| jvm.threads.live | Live thread count | - |
+| jvm.threads.daemon | Daemon thread count | - |
+| jvm.gc.pause | GC pause times | cause, gc |
 
 ### HTTP Metrics
 
-| Metric | Description |
-|--------|-------------|
-| http.server.requests | HTTP request counts |
-| http.server.requests.duration | Request durations |
-| http.server.requests.active | Active requests |
+| Metric | Description | Tags |
+|--------|-------------|------|
+| http.server.requests | HTTP request counts | method, uri, status |
+| http.server.requests.duration | Request durations | method, uri |
+| http.server.requests.active | Active requests | - |
 
 ### Database Metrics
 
-| Metric | Description |
-|--------|-------------|
-| hikaricp.connections.active | Active connections |
-| hikaricp.connections.idle | Idle connections |
-| hikaricp.connections.pending | Pending connections |
+| Metric | Description | Tags |
+|--------|-------------|------|
+| hikaricp.connections.active | Active connections | - |
+| hikaricp.connections.idle | Idle connections | - |
+| hikaricp.connections.pending | Pending connections | - |
+| hikaricp.connections.max | Max connections | - |
+
+### Custom Business Metrics
+
+```java
+@Component
+public class RequestMetrics {
+    private final Counter requestCounter;
+    private final Timer requestTimer;
+    
+    public RequestMetrics(MeterRegistry registry) {
+        this.requestCounter = Counter.builder("accessiq.requests.total")
+            .description("Total requests created")
+            .register(registry);
+        this.requestTimer = Timer.builder("accessiq.requests.duration")
+            .description("Request processing time")
+            .register(registry);
+    }
+    
+    public void recordRequest() {
+        requestCounter.increment();
+    }
+}
+```
 
 ## Prometheus Integration
 
@@ -85,6 +127,9 @@ management:
     export:
       prometheus:
         enabled: true
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
 ```
 
 ### Sample Metrics Output
@@ -96,49 +141,44 @@ jvm_memory_bytes_used{area="heap",} 1.534845952E8
 
 # HELP http_server_requests_seconds_count
 # TYPE http_server_requests_seconds_count counter
-http_server_requests_seconds_count{method="GET",uri="/api/v1/requests",} 42.0
+http_server_requests_seconds_count{method="GET",uri="/api/v1/requests",status="200",} 42.0
 
 # HELP hikaricp_connections_active
 # TYPE hikaricp_connections_active gauge
 hikaricp_connections_active 5.0
 ```
 
+### Prometheus Configuration
+
+```yaml
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'accessiq'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['accessiq:8080']
+```
+
 ## Grafana Dashboard
 
-Import the dashboard from `grafana/dashboard.json`:
+### Import Dashboard
 
-### Panels
+1. Open Grafana
+2. Navigate to Dashboards → Manage → Import
+3. Upload `grafana/dashboard.json`
+4. Configure Prometheus as data source
+
+### Dashboard Panels
 
 1. **Application Health** - Overall health status
-2. **HTTP Request Rate** - Requests per second
+2. **HTTP Request Rate** - Requests per second by endpoint
 3. **JVM Memory Usage** - Heap and non-heap memory
 4. **Database Connections** - Active and idle connections
-5. **HTTP Response Time** - Average response time
+5. **HTTP Response Time** - Request duration percentiles
 6. **GC Activity** - Garbage collection metrics
-
-## Custom Metrics
-
-### Business Metrics
-
-Track custom business metrics using Micrometer:
-
-```java
-@Service
-public class RequestService {
-    private final Counter requestCounter;
-    
-    public RequestService(MeterRegistry registry) {
-        this.requestCounter = Counter.builder("accessiq.requests.created")
-            .description("Number of requests created")
-            .register(registry);
-    }
-    
-    public Request createRequest(...) {
-        requestCounter.increment();
-        ...
-    }
-}
-```
+7. **Business Metrics** - Custom request counts
 
 ## Alerting Rules
 
@@ -156,7 +196,7 @@ groups:
         annotations:
           summary: High error rate
           description: Error rate is above 5% for more than 5 minutes
-      
+
       - alert: HighMemoryUsage
         expr: jvm_memory_bytes_used / jvm_memory_bytes_max > 0.9
         for: 2m
@@ -165,7 +205,7 @@ groups:
         annotations:
           summary: High memory usage
           description: Memory usage is above 90%
-      
+
       - alert: DatabaseDown
         expr: up{job="accessiq"} == 0
         for: 1m
@@ -174,7 +214,24 @@ groups:
         annotations:
           summary: Database is down
           description: Database connection is not available
+
+      - alert: SlowResponses
+        expr: histogram_quantile(0.95, rate(http_server_requests_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Slow responses
+          description: 95th percentile response time is above 2 seconds
 ```
+
+### Alert Severity Levels
+
+| Level | Condition | Action |
+|-------|-----------|--------|
+| Critical | > 90% memory, > 5% 5xx errors, service down | PagerDuty/Slack alert |
+| Warning | > 80% memory, > 1s response time | Slack notification |
+| Info | New deployment, config change | Log event |
 
 ## Monitoring Setup
 
@@ -201,46 +258,55 @@ open http://localhost:3000
 3. Set up alerting rules
 4. Configure log aggregation
 
-## Log Monitoring
+## Key Metrics to Monitor
 
-### Structured Logging
+### Application Health
 
-Logs follow a structured format:
+| Metric | Target | Alert |
+|--------|--------|-------|
+| Health Status | UP | Critical |
+| Uptime | 99.9% | - |
+| Restart Count | < 1/day | Warning |
 
-```
-2024-01-15 10:30:00.000 [http-nio-8080-exec-1] INFO  c.a.service.RequestService - Creating request with title: Leave Request for user: employee@accessiq.com
-```
+### Performance
 
-### Log Levels
+| Metric | Target | Alert |
+|--------|--------|-------|
+| 95th percentile response | < 500ms | Warning |
+| 99th percentile response | < 1000ms | Warning |
+| Error rate | < 1% | Critical |
+| Database latency | < 100ms | Warning |
 
-| Level | Usage |
-|-------|-------|
-| ERROR | Application errors |
-| WARN | Warnings |
-| INFO | Business operations |
-| DEBUG | Debug information |
-| TRACE | Detailed tracing |
+### Resources
 
-## Performance Monitoring
-
-### Key Metrics to Watch
-
-1. **Response Time** - Should be under 200ms
-2. **Throughput** - Requests per second
-3. **Error Rate** - Should be under 1%
-4. **Database Latency** - Query execution time
-5. **Connection Pool** - Utilization percentage
-
-### Baseline Metrics
-
-| Metric | Target |
-|--------|--------|
-| 95th percentile response | < 500ms |
-| 99th percentile response | < 1000ms |
-| Error rate | < 0.1% |
-| Database connections | < 80% pool |
-| Memory usage | < 75% heap |
+| Metric | Target | Alert |
+|--------|--------|-------|
+| Memory usage | < 75% | Warning |
+| CPU usage | < 80% | Warning |
+| Disk usage | < 85% | Warning |
+| Connection pool | < 80% | Warning |
 
 ## Troubleshooting
 
-See [Troubleshooting.md](Troubleshooting.md) for common monitoring issues.
+### High Memory Usage
+
+1. Check heap dump: `/actuator/heapdump`
+2. Analyze with Eclipse MAT or VisualVM
+3. Look for memory leaks in business code
+
+### Slow Response Times
+
+1. Check database query times
+2. Analyze slow endpoint with profiling
+3. Check for thread blocking
+
+### High Error Rate
+
+1. Check logs for exception stack traces
+2. Verify database connectivity
+3. Check third-party service availability
+
+## See Also
+
+- [AWS-Deployment.md](AWS-Deployment.md) - AWS monitoring setup
+- [Troubleshooting.md](Troubleshooting.md) - Common issues
